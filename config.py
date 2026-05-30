@@ -1,0 +1,5 @@
+import telebot
+
+TOKEN = '7950898503:AAFYZE9Q4tHwKeO6H6c0X6EDKTaWPABTA0I'
+ID = 5442380664
+bot = telebot.TeleBot(TOKEN)
