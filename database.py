@@ -1,10 +1,11 @@
 import sqlite3
-from telebot import types
-from config import bot, ID
+import os
+
+DB_PATH = os.getenv("DB_PATH", "tasks.db")
 
 
 def init_database():
-    conn = sqlite3.connect("tasks.db")
+    conn = sqlite3.connect("DB_PATH")
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -39,7 +40,7 @@ def init_database():
 
 # DATABASE ACCESS
 def execute(query, params=()):
-    conn = sqlite3.connect("tasks.db")
+    conn = sqlite3.connect("DB_PATH")
     cursor = conn.cursor()
     cursor.execute(query, params)
     conn.commit()
@@ -47,7 +48,7 @@ def execute(query, params=()):
 
 
 def fetchall(query, params=()):
-    conn = sqlite3.connect("tasks.db")
+    conn = sqlite3.connect("DB_PATH")
     cursor = conn.cursor()
     cursor.execute(query, params)
     result = cursor.fetchall()
@@ -56,7 +57,7 @@ def fetchall(query, params=()):
 
 
 def fetchone(query, params=()):
-    conn = sqlite3.connect("tasks.db")
+    conn = sqlite3.connect("DB_PATH")
     cursor = conn.cursor()
     cursor.execute(query, params)
     result = cursor.fetchone()
