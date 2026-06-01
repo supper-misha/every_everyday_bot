@@ -82,7 +82,6 @@ def send_routin(list_name):
     markup, undone = markup_for_routin_tasks(list_name, tasks, "done")
     message = bot.send_message(ID, info, reply_markup=markup)
 
-    print("got here")
     # UPDATING THE PIN
     PIN_KEY = f"{list_name}_pin"
     tmp = fetchone("SELECT value FROM bot_state WHERE key = ?", (PIN_KEY,))
