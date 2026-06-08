@@ -31,7 +31,7 @@ scheduler.add_job(
     timezone="Europe/Moscow"
 )
 scheduler.add_job(
-    send_daily_books_report(),
+    send_daily_books_report,
     'cron',
     hour=23,
     minute=0,
