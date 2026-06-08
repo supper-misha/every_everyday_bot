@@ -4,6 +4,7 @@ import handlers
 import config
 import schedule
 import stats
+import books
 
 from config import bot
 from database import init_database

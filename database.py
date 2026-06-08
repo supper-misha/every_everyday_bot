@@ -1,14 +1,20 @@
 import sqlite3
 import os
+from dotenv import load_dotenv
 
+load_dotenv()
 DB_PATH = os.getenv("DB_PATH", "tasks.db")
 
 
-def init_database():
+def get_conn():
     conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
+    conn.row_factory = sqlite3.Row
+    return conn
 
-    cursor.execute("""
+
+def init_database():
+    # ROUTIN
+    execute("""
     CREATE TABLE IF NOT EXISTS tasks (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         list_name TEXT NOT NULL,
@@ -18,13 +24,14 @@ def init_database():
         done INTEGER DEFAULT 0
     )
     """)
-    cursor.execute("""
+    execute("""
     CREATE TABLE IF NOT EXISTS bot_state (
         key TEXT PRIMARY KEY,
         value TEXT
     )
     """)
-    cursor.execute("""
+    # PROG
+    execute("""
     CREATE TABLE IF NOT EXISTS problems (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
@@ -34,13 +41,31 @@ def init_database():
         comment TEXT
     )
     """)
-    conn.commit()
-    conn.close()
+    # BOOKS
+    execute("""
+    CREATE TABLE IF NOT EXISTS books (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        author TEXT,
+        total_pages INTEGER NOT NULL,
+        start_date TEXT,
+        end_date TEXT
+    )
+    """)
+
+    execute("""
+    CREATE TABLE IF NOT EXISTS reading_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        book_id INTEGER NOT NULL,
+        pages_read INTEGER NOT NULL,
+        date TEXT NOT NULL
+    )
+    """)
 
 
 # DATABASE ACCESS
 def execute(query, params=()):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_conn()
     cursor = conn.cursor()
     cursor.execute(query, params)
     conn.commit()
@@ -48,7 +73,7 @@ def execute(query, params=()):
 
 
 def fetchall(query, params=()):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_conn()
     cursor = conn.cursor()
     cursor.execute(query, params)
     result = cursor.fetchall()
@@ -57,7 +82,7 @@ def fetchall(query, params=()):
 
 
 def fetchone(query, params=()):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_conn()
     cursor = conn.cursor()
     cursor.execute(query, params)
     result = cursor.fetchone()

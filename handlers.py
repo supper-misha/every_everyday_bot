@@ -1,9 +1,8 @@
 from config import bot, ID
 from routin import send_routin, routin_mode
 from telebot import types
-import sqlite3
 from stats import reg_prog_task, send_prog_task, prog_mode, reg_special_comment
-import database
+from books import add_book_mode, show_books, send_weekly_books_report,send_daily_books_report
 
 
 # DEBUG
@@ -20,6 +19,12 @@ def send(message):
 @bot.message_handler(commands=['send3'])
 def send3(message):
     send_prog_task()
+
+
+@bot.message_handler(commands=['send4'])
+def send4(message):
+    send_weekly_books_report()
+    send_daily_books_report()
 
 
 # MAIN HANDLERS
@@ -48,3 +53,13 @@ def prog(message):
 
     message = bot.send_message(ID, 'Что делаем?', reply_markup=markup)
     bot.register_next_step_handler(message, prog_mode)
+
+
+@bot.message_handler(commands=['addbook'])
+def add_book(message):
+    add_book_mode(message)
+
+
+@bot.message_handler(commands=['books'])
+def books(message):
+    show_books()

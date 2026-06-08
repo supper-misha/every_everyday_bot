@@ -4,6 +4,7 @@ INDEX_ID = 0
 NAME_ID = 2
 DONE_ID = 5
 
+
 # ROUTIN
 def format_routin_tasks(tasks):
     result = '\n'.join([f'✖️ {el[NAME_ID]}' for el in tasks if not el[DONE_ID]])
