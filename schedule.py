@@ -1,6 +1,7 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from routin import send_routin
 from stats import send_daily_prog
+from books import send_daily_books_report
 
 scheduler = BackgroundScheduler()
 
@@ -25,7 +26,14 @@ scheduler.add_job(
 scheduler.add_job(
     send_daily_prog,
     'cron',
-    hour=21,
+    hour=23,
+    minute=0,
+    timezone="Europe/Moscow"
+)
+scheduler.add_job(
+    send_daily_books_report(),
+    'cron',
+    hour=23,
     minute=0,
     timezone="Europe/Moscow"
 )
