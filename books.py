@@ -133,17 +133,13 @@ def save_read_pages(message, book_id):
 
     today = datetime.now().strftime("%Y-%m-%d")
 
-    last = fetchone("""
-        SELECT pages_read
+    total_read = fetchone("""
+        SELECT SUM(pages_read)
         FROM reading_log
         WHERE book_id = ?
-        ORDER BY id DESC
-        LIMIT 1
-    """, (book_id,))
+    """, (book_id,))[0] or 0
 
-    last_page = last[0] if last else 0
-
-    diff = current_page - last_page
+    diff = current_page - total_read
 
     if diff <= 0:
         bot.send_message(message.chat.id, "Ты не продвинулся вперёд")
