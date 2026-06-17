@@ -11,61 +11,68 @@ HEADING_SEND_MAP = {
     "morning": "УТРЕННЯЯ РУТИНА 🌅\n\n",
     "evening": "ВЕЧЕРНЯЯ РУТИНА 🌃\n\n"
 }
-HEADING_DEL_MAP = {
-    "morning": "УДАЛЕНИЕ УТРО 🌅\n\n",
-    "evening": "УДАЛЕНИЕ ВЕЧЕР 🌃\n\n"
-}
 
 
-# CHANGING ROUTIN
-def routin_mode(message):
-    mode = message.text
+@bot.message_handler(commands=['routin'])
+def routin(message):
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.row(
+        types.KeyboardButton('Утро 🌅'),
+        types.KeyboardButton('Вечер 🌃')
+    )
 
-    markup = types.ReplyKeyboardMarkup()
-    btn1 = types.KeyboardButton('Утро 🌅')
-    btn2 = types.KeyboardButton('Вечер 🌃')
-    markup.row(btn1, btn2)
+    msg = bot.send_message(
+        ID,
+        "Какую рутину изменить?",
+        reply_markup=markup
+    )
 
-    if mode == 'Добавить ➕':
-        message1 = bot.send_message(ID, 'В какую рутину добавить', reply_markup=markup)
-        bot.register_next_step_handler(message1, reg_routin, 1, "&")
-    elif mode == 'Удалить ➖':
-        message1 = bot.send_message(ID, 'Из какой рутины удалить', reply_markup=markup)
-        bot.register_next_step_handler(message1, send_delete_routin)
-
-
-def reg_routin(message, step, list_name):
-    if step == 1:
-        # GETTING TASK NAME
-        message1 = bot.send_message(ID, 'Что делаем', reply_markup=types.ReplyKeyboardRemove())
-        list_name = ROUTINE_MAP[message.text.split()[0].lower()]
-        bot.register_next_step_handler(message1, reg_routin, 2, list_name)
-    else:
-        # INSERTING TASK INTO DATABASE
-        if list_name == "morning":
-            par = ("morning", message.text, "06:00", "cron")
-        elif list_name == "evening":
-            par = ("evening", message.text, "20:00", "cron")
-
-        execute("""
-            INSERT INTO tasks (list_name,text,task_time,repeat_time)
-            VALUES (?,?,?,?)
-        """, par)
-
-        bot.send_message(ID, "Задача добавлена!", reply_markup=types.ReplyKeyboardRemove())
+    bot.register_next_step_handler(msg, send_routin_for_edit)
 
 
-def send_delete_routin(message):
+def send_routin_for_edit(message):
     list_name = ROUTINE_MAP[message.text.split()[0].lower()]
 
-    tasks = fetchall("SELECT * FROM tasks WHERE list_name = ?", (list_name,))
+    tasks = fetchall("""
+        SELECT text FROM tasks
+        WHERE list_name = ?
+        ORDER BY id
+    """, (list_name,))
 
-    info = HEADING_DEL_MAP[list_name]
-    info += format_routin_tasks(tasks)
+    if not tasks:
+        msg_text = ""
+    else:
+        msg_text = "\n".join([t["text"] for t in tasks])
 
-    markup, _ = markup_for_routin_tasks(list_name, tasks, "delete")
+    msg = bot.send_message(
+        ID,
+        msg_text if msg_text else "Список пуст",
+        reply_markup=types.ReplyKeyboardRemove()
+    )
 
-    bot.send_message(ID, info, reply_markup=markup)
+    bot.register_next_step_handler(msg, apply_routin_edit, list_name)
+
+
+def apply_routin_edit(message, list_name):
+    raw_text = message.text.strip()
+
+    execute("DELETE FROM tasks WHERE list_name = ?", (list_name,))
+
+    if raw_text:
+        lines = [line.strip() for line in raw_text.split("\n") if line.strip()]
+
+        for line in lines:
+            execute("""
+                INSERT INTO tasks (list_name, text, task_time, repeat_time, done)
+                VALUES (?, ?, ?, ?, 0)
+            """, (
+                list_name,
+                line,
+                "06:00" if list_name == "morning" else "20:00",
+                "cron"
+            ))
+
+    bot.send_message(ID, "Рутина изменена!")
 
 
 # EVERYDAY ROUTIN
@@ -87,7 +94,10 @@ def send_routin(list_name):
     tmp = fetchone("SELECT value FROM bot_state WHERE key = ?", (PIN_KEY,))
     old_pin = int(tmp[0]) if tmp else None
     if old_pin:
-        bot.unpin_chat_message(ID, old_pin)
+        try:
+            bot.unpin_chat_message(ID, old_pin)
+        except Exception:
+            pass
 
     execute("""
         INSERT OR REPLACE INTO bot_state (key, value)

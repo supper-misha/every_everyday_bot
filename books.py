@@ -43,7 +43,7 @@ def format_book_report(b, pages):
 def add_book_mode(message):
     msg = bot.send_message(
         message.chat.id,
-        "Название книги:",
+        "Название книги",
         reply_markup=types.ReplyKeyboardRemove()
     )
     bot.register_next_step_handler(msg, get_book_author)
@@ -52,7 +52,7 @@ def add_book_mode(message):
 def get_book_author(message):
     title = message.text.strip()
 
-    msg = bot.send_message(message.chat.id, "Автор:")
+    msg = bot.send_message(message.chat.id, "Автор")
     bot.register_next_step_handler(msg, get_book_pages, title)
 
 
@@ -104,7 +104,7 @@ def read_books(message):
             )
         )
 
-    bot.send_message(message.chat.id, "Выбери книгу:", reply_markup=markup)
+    bot.send_message(message.chat.id, "Выбери книгу", reply_markup=markup)
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("book_read&"))
@@ -170,6 +170,75 @@ def save_read_pages(message, book_id):
 
 
 # ----------------------------
+# DELETE BOOK
+# ----------------------------
+@bot.message_handler(commands=['delbook'])
+def delete_book(message):
+    books = fetchall("""
+        SELECT *
+        FROM books
+        ORDER BY end_date IS NOT NULL, title
+    """)
+
+    if not books:
+        bot.send_message(message.chat.id, "Книг нет")
+        return
+
+    markup = types.InlineKeyboardMarkup()
+
+    for b in books:
+        markup.add(
+            types.InlineKeyboardButton(
+                text=b["title"],
+                callback_data=f"book_delete&{b['id']}"
+            )
+        )
+
+    bot.send_message(
+        message.chat.id,
+        "Выбери книгу для удаления",
+        reply_markup=markup
+    )
+
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("book_delete&"))
+def delete_book_callback(call):
+    _, book_id = call.data.split("&")
+    book_id = int(book_id)
+
+    book = fetchone("""
+        SELECT *
+        FROM books
+        WHERE id = ?
+    """, (book_id,))
+
+    if not book:
+        bot.answer_callback_query(call.id, "Книга не найдена")
+        return
+
+    title = book["title"]
+
+    execute("""
+        DELETE FROM reading_log
+        WHERE book_id = ?
+    """, (book_id,))
+
+    execute("""
+        DELETE FROM books
+        WHERE id = ?
+    """, (book_id,))
+
+    bot.edit_message_text(
+        f"Книга *{title}* удалена",
+        call.message.chat.id,
+        call.message.message_id,
+        parse_mode="Markdown"
+    )
+
+    bot.answer_callback_query(call.id)
+
+
+# ----------------------------
 # WEEKLY REPORT
 # ----------------------------
 
@@ -219,7 +288,7 @@ def send_daily_books_report():
         bot.send_message(ID, "За сегодня не было чтения 📚")
         return
 
-    msg = "СЕГОДНЯ ПРОЧИТАНО 📚\n\n"
+    msg = "СЕГОДНЯ ПРОЧИТАНО 📚\n"
 
     for book_id, pages in stats:
         book = fetchone("SELECT * FROM books WHERE id = ?", (book_id,))

@@ -1,5 +1,5 @@
 from config import bot, ID
-from routin import send_routin, routin_mode
+from routin import send_routin
 from telebot import types
 from stats import reg_prog_task, send_prog_task, prog_mode, reg_special_comment
 from books import add_book_mode, show_books, send_weekly_books_report,send_daily_books_report
@@ -31,17 +31,6 @@ def send4(message):
 @bot.message_handler(commands=['start'])
 def start(message):
     bot.send_message(message.chat.id, "Бот запущен!")
-
-
-@bot.message_handler(commands=['routin'])
-def routin(message):
-    markup = types.ReplyKeyboardMarkup()
-    btn1 = types.KeyboardButton('Добавить ➕')
-    btn2 = types.KeyboardButton('Удалить ➖')
-    markup.row(btn1, btn2)
-
-    message1 = bot.send_message(ID, 'Что делаем?', reply_markup=markup)
-    bot.register_next_step_handler(message1, routin_mode)
 
 
 @bot.message_handler(commands=['prog'])
