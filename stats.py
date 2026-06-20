@@ -5,6 +5,17 @@ from database import fetchall, fetchone, execute
 
 
 # PROGRAMMING
+@bot.message_handler(commands=['prog'])
+def prog(message):
+    markup = types.ReplyKeyboardMarkup()
+    btn1 = types.KeyboardButton('Добавить ➕')
+    btn2 = types.KeyboardButton('Отредактировать ✏️')
+    markup.row(btn1, btn2)
+
+    message = bot.send_message(ID, 'Что делаем?', reply_markup=markup)
+    bot.register_next_step_handler(message, prog_mode)
+
+
 def prog_mode(message):
     text = message.text.lower()
     if text.startswith('добавить'):

@@ -5,20 +5,26 @@ from formatting import format_routin_tasks, markup_for_routin_tasks
 
 ROUTINE_MAP = {
     "утро": "morning",
-    "вечер": "evening"
+    "вечер": "evening",
+    "неделя": "week",
+    "75": "75_soft"
 }
 HEADING_SEND_MAP = {
     "morning": "УТРЕННЯЯ РУТИНА 🌅\n\n",
-    "evening": "ВЕЧЕРНЯЯ РУТИНА 🌃\n\n"
+    "evening": "ВЕЧЕРНЯЯ РУТИНА 🌃\n\n",
+    "week": "НЕДЕЛЬНАЯ РУТИНА 📅\n\n",
+    "75_soft": "75 SOFT ⛩\n\n"
 }
 
 
-@bot.message_handler(commands=['routin'])
+@bot.message_handler(commands=['routin_change'])
 def routin(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.row(
         types.KeyboardButton('Утро 🌅'),
-        types.KeyboardButton('Вечер 🌃')
+        types.KeyboardButton('Вечер 🌃'),
+        types.KeyboardButton('Неделя 📅'),
+        types.KeyboardButton('75 soft ⛩')
     )
 
     msg = bot.send_message(
@@ -68,7 +74,7 @@ def apply_routin_edit(message, list_name):
             """, (
                 list_name,
                 line,
-                "06:00" if list_name == "morning" else "20:00",
+                "00:00",
                 "cron"
             ))
 
@@ -77,22 +83,47 @@ def apply_routin_edit(message, list_name):
 
 # EVERYDAY ROUTIN
 def send_routin(list_name):
-    # SETTING DONE TO 0
-    execute("UPDATE tasks SET done = 0 WHERE list_name = ?", (list_name,))
+    tasks = fetchall(
+        "SELECT * FROM tasks WHERE list_name = ?",
+        (list_name,)
+    )
 
-    # GETTING THE TASKS
-    tasks = fetchall("SELECT * FROM tasks WHERE list_name = ?", (list_name,))
-
-    # SENDING THE TASKS
     info = HEADING_SEND_MAP[list_name]
     info += format_routin_tasks(tasks)
-    markup, undone = markup_for_routin_tasks(list_name, tasks, "done")
-    message = bot.send_message(ID, info, reply_markup=markup)
 
-    # UPDATING THE PIN
-    PIN_KEY = f"{list_name}_pin"
-    tmp = fetchone("SELECT value FROM bot_state WHERE key = ?", (PIN_KEY,))
+    markup, undone = markup_for_routin_tasks(
+        list_name,
+        tasks,
+        "done"
+    )
+
+    return bot.send_message(
+        ID,
+        info,
+        reply_markup=markup
+    )
+
+
+def send_daily_routin(list_name):
+    # сбрасываем выполнение
+    execute(
+        "UPDATE tasks SET done = 0 WHERE list_name = ?",
+        (list_name,)
+    )
+
+    # отправляем новую рутину
+    message = send_routin(list_name)
+
+    # обновляем закреп
+    pin_key = f"{list_name}_pin"
+
+    tmp = fetchone(
+        "SELECT value FROM bot_state WHERE key = ?",
+        (pin_key,)
+    )
+
     old_pin = int(tmp[0]) if tmp else None
+
     if old_pin:
         try:
             bot.unpin_chat_message(ID, old_pin)
@@ -102,7 +133,8 @@ def send_routin(list_name):
     execute("""
         INSERT OR REPLACE INTO bot_state (key, value)
         VALUES (?, ?)
-    """, (PIN_KEY, str(message.message_id)))
+    """, (pin_key, str(message.message_id)))
+
     bot.pin_chat_message(ID, message.message_id)
 
 
@@ -135,17 +167,3 @@ def callback(call):
     bot.edit_message_text(info, ID, pin, reply_markup=markup)
     if undone == 0:
         bot.unpin_chat_message(ID, pin)
-
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith('delete'))
-def delete_callback(call):
-    _, list_name, task_id = call.data.split('&')
-
-    execute("""
-        DELETE FROM tasks
-        WHERE id = ?
-    """, (task_id,))
-
-    bot.delete_message(call.message.chat.id, call.message.message_id)
-
-    bot.send_message(ID, "Задача удалена!", reply_markup=types.ReplyKeyboardRemove())
