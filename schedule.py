@@ -24,6 +24,15 @@ scheduler.add_job(
     timezone="Europe/Moscow"
 )
 scheduler.add_job(
+    send_daily_routin,
+    trigger='cron',
+    day_of_week='mon',
+    hour=6,
+    minute=0,
+    args=['week']
+)
+
+scheduler.add_job(
     send_daily_prog,
     'cron',
     hour=23,
